@@ -12,3 +12,12 @@ REGISTER_LEAF(L_Idle, "L_Idle")
 REGISTER_LEAF(L_MoveToFurthestAgent, "L_MoveToFurthestAgent")
 REGISTER_LEAF(L_MoveToMouseClick, "L_MoveToMouseClick")
 REGISTER_LEAF(L_MoveToRandomPosition, "L_MoveToRandomPosition")
+
+
+//# Our own implementation
+REGISTER_DECORATOR(D_IsInsideBox, "D_IsInsideBox")
+
+REGISTER_LEAF(L_MoveBehindTarget, "L_MoveBehindTarget")
+REGISTER_LEAF(L_MoveAwayFromBox, "L_MoveAwayFromBox")
+REGISTER_LEAF(L_FindClosestHen, "L_FindClosestHen")
+REGISTER_LEAF(L_WolfInRange, "L_WolfInRange")
