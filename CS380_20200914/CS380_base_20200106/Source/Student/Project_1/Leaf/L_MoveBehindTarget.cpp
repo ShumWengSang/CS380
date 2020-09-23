@@ -6,7 +6,7 @@ L_MoveBehindTarget::L_MoveBehindTarget() : Hen(nullptr), behindTargetDistance(3.
 
 void L_MoveBehindTarget::on_enter()
 {
-    Hen = agent->get_blackboard().get_value<Agent*>("ClosestHen");
+    Hen = agent->get_blackboard().get_value<Agent const*>("ClosestHen");
 
 
 	BehaviorNode::on_leaf_enter();

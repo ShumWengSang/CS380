@@ -8,8 +8,8 @@ public:
 
 protected:
     float rangeSquared;
-    std::vector<Agent*> const * wolfAgents;
-    std::vector<std::pair<Agent*, Vec3>> WolfsInRange;
+    std::vector<Agent*> const * workerAgents;
+    std::vector<std::pair<Agent*, Vec3>> AdultsInRange;
     virtual void on_enter() override;
     virtual void on_update(float dt) override;
 };

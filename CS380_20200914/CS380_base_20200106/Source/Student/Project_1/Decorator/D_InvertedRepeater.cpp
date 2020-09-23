@@ -1,9 +1,10 @@
 #include <pch.h>
 #include "D_InvertedRepeater.h"
 
+
 void D_InvertedRepeater::on_update(float dt)
 {
-    BehaviorNode *child = children.front();
+    BehaviorNode* child = children.front();
 
     child->tick(dt);
 

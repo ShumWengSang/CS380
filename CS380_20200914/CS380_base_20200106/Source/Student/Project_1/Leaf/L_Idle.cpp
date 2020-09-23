@@ -9,6 +9,7 @@ void L_Idle::on_enter()
     timer = RNG::range(1.0f, 2.0f);
 
 	BehaviorNode::on_leaf_enter();
+    
 }
 
 void L_Idle::on_update(float dt)

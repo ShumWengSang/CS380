@@ -7,7 +7,7 @@ L_FindClosestHen::L_FindClosestHen()
 void L_FindClosestHen::on_enter()
 {
     // get a list of all current hens
-    auto& Hens = (agents->get_all_agents_by_type("Hens"));
+    auto& Hens = (agents->get_all_agents_by_type("Adult"));
     // Get our current position
     const auto& currPos = agent->get_position();
 
@@ -28,6 +28,7 @@ void L_FindClosestHen::on_enter()
         }
     }
 
+    BehaviorNode::on_leaf_enter();
     if (Hens.empty())
     {
         on_failure();
@@ -39,11 +40,9 @@ void L_FindClosestHen::on_enter()
     }
 
 
-    BehaviorNode::on_leaf_enter();
 }
 
 void L_FindClosestHen::on_update(float dt)
 {
-
     display_leaf_text();
 }

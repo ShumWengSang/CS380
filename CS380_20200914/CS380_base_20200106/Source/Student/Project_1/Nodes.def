@@ -15,9 +15,26 @@ REGISTER_LEAF(L_MoveToRandomPosition, "L_MoveToRandomPosition")
 
 
 //# Our own implementation
+REGISTER_CONTROLFLOW(C_Sequencer_Fail, "C_Sequencer_Fail")
+REGISTER_CONTROLFLOW(C_RandomSelector_OneFail, "C_RandomSelector_OneFail")
+
 REGISTER_DECORATOR(D_IsInsideBox, "D_IsInsideBox")
+REGISTER_DECORATOR(D_HasJob, "D_HasJob")
+REGISTER_DECORATOR(D_isNotCrazy, "D_isNotCrazy")
 
 REGISTER_LEAF(L_MoveBehindTarget, "L_MoveBehindTarget")
 REGISTER_LEAF(L_MoveAwayFromBox, "L_MoveAwayFromBox")
 REGISTER_LEAF(L_FindClosestHen, "L_FindClosestHen")
 REGISTER_LEAF(L_WolfInRange, "L_WolfInRange")
+
+REGISTER_LEAF(L_GoToJob, "L_GoToJob")
+REGISTER_LEAF(L_WorkingJob, "L_WorkingJob")
+REGISTER_LEAF(L_AssignJob, "L_AssignJob")
+REGISTER_LEAF(L_AssignJobTwo, "L_AssignJobTwo")
+REGISTER_LEAF(L_AssignJobThree, "L_AssignJobThree")
+REGISTER_LEAF(L_AssignJobFour, "L_AssignJobFour")
+REGISTER_LEAF(L_AssignJobFive, "L_AssignJobFive")
+REGISTER_LEAF(L_MoveToOffice, "L_MoveToOffice")
+
+REGISTER_LEAF(L_BeCrazy, "L_BeCrazy")
+REGISTER_LEAF(L_RandomMovements, "L_RandomMovements")
