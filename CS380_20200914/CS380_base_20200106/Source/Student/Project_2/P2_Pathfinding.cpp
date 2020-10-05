@@ -84,11 +84,11 @@ PathResult AStarPather::compute_path(PathRequest &request)
 
     
     // Just sample code, safe to delete
-    GridPos start = terrain->get_grid_position(request.start);
-    GridPos goal = terrain->get_grid_position(request.goal);
-    terrain->set_color(start, Colors::Orange);
-    terrain->set_color(goal, Colors::Orange);
-    request.path.push_back(request.start);
-    request.path.push_back(request.goal);
-    return PathResult::COMPLETE;
+    //GridPos start = terrain->get_grid_position(request.start);
+    //GridPos goal = terrain->get_grid_position(request.goal);
+    //terrain->set_color(start, Colors::Orange);
+    //terrain->set_color(goal, Colors::Orange);
+    //request.path.push_back(request.start);
+    //request.path.push_back(request.goal);
+    //return PathResult::COMPLETE;
 }

@@ -13,8 +13,7 @@ void ProjectOne::setup()
     }
 
 
-    // Make workers
-    for (int i = 0; i < 5; ++i)
+    // Make workers    for (int i = 0; i < 5; ++i)
     {
         agent = agents->create_behavior_agent("Worker", BehaviorTreeTypes::Worker);
         agent->set_position(Vec3(50, 0, 50));
