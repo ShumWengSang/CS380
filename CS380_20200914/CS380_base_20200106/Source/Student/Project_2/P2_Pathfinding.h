@@ -24,7 +24,7 @@ class Array2D
     int width, height;
 public:
     Node& GetNode(int x, int y);
-    
+    Node& GetNode(GridPos position);
     // Returns the x,y of the address passed in.
     auto GetPosition(Node* ptr);
     void GetAllChildNodes(int x, int y, GetNodeInformation(&arr)[8]);

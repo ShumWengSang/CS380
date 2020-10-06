@@ -1,7 +1,7 @@
 #include <pch.h>
 #include "Projects/ProjectTwo.h"
 #include "P2_Pathfinding.h"
-
+#include <functional>
 
 static const float WallCost = 9999;
 
@@ -34,6 +34,7 @@ auto Array2D::GetPosition(Node* ptr)
     long long x = 0, y = 0;
     x = remainder / width;
     y = remainder - (width * x);
+    std::cout << "Returning x: " << x << " y: " << y << std::endl;
     return std::make_tuple((int)x, (int)y);
 }
 
@@ -121,6 +122,7 @@ PathResult AStarPather::compute_path(PathRequest &request)
         EndGoal = &(NodeMap.GetNode(goal.row,goal.col));
 
         OpenList.clear();
+
         // Push Start node into open list
         OpenList.emplace_back(startNode);
     }
@@ -133,6 +135,7 @@ PathResult AStarPather::compute_path(PathRequest &request)
         // If we have found the goal
         if (cheapestNode == EndGoal)
         {
+            FinalizeEndPath(request, cheapestNode);
             return PathResult::COMPLETE;
         }
 
@@ -247,13 +250,20 @@ void AStarPather::FinalizeEndPath(PathRequest& request, Node* endNode)
 {
     // Walk the end node until we reach {-1, -1}
     Node* currNode = endNode;
+    auto [x, y] = NodeMap.GetPosition(endNode);
+    auto worldPos = terrain->get_world_position( x,y );
+    request.path.emplace_back(worldPos);
+
     // Check for -1 
     while (currNode->parentPosition.col != -1)
     {
         // If debug on
         auto worldPos = terrain->get_world_position(currNode->parentPosition);
         request.path.emplace_back(worldPos);
+        currNode = &NodeMap.GetNode(currNode->parentPosition);
     }
+
+    std::reverse(request.path.begin(), request.path.end());
 
 }
 
@@ -284,9 +294,9 @@ void Array2D::GetAllChildNodes(int x, int y, GetNodeInformation(&arr)[8])
     static const float diagonalCost = sqrtf(2.0f);
     static const float flatCost = 1.0f;
     // Go through the neighbours with bounds checking built in.
-    for (int i = std::max(0, x - 1); i <= std::min(x + 1, row_limit); ++i)
+    for (int i = std::max(0, x - 1); i <= std::min(x + 1, row_limit - 1); ++i)
     {
-        for (int j = std::max(0, y - 1); j <= std::min(y + 1, column_limit); ++j)
+        for (int j = std::max(0, y - 1); j <= std::min(y + 1, column_limit - 1); ++j)
         {
             if (x != i || y != j)
             {
@@ -294,6 +304,10 @@ void Array2D::GetAllChildNodes(int x, int y, GetNodeInformation(&arr)[8])
                 arr[arrayIndex].Cost = isStraight(x, y, i, j) ? flatCost : diagonalCost;
                 arr[arrayIndex].Possible = (this->GetNode(i,j).cost != WallCost);
                 ++arrayIndex;
+            }
+            if (arrayIndex >= 9)
+            {
+                DebugBreak();
             }
         }
     }
@@ -319,7 +333,12 @@ void Array2D::Reset()
 
 void Array2D::Clear()
 {
-    memset(nodes.data(), 0, sizeof(Node) * nodes.size());
+    for (int i = 0; i < nodes.size(); ++i)
+    {
+        // Ignore if wall
+        if(nodes[i].cost != WallCost)
+            nodes[i] = Node();
+    }
 }
 
 // Make sure you've set the size before calling this.
@@ -329,5 +348,17 @@ Node& Array2D::GetNode(int x, int y)
         DebugBreak();
     if (x * y < 0)
         DebugBreak();
+    if (x >= width)
+        DebugBreak();
+    if (y >= height)
+        DebugBreak();
+
+    auto index = (dataPtr + x * width + y) - dataPtr;
+    std::cout << "Request of " << x << " : " << y << " gives " << index << " thing." << std::endl;
     return *(dataPtr + x * width + y);
+}
+
+Node& Array2D::GetNode(GridPos position)
+{
+    return GetNode(position.row, position.col);
 }
