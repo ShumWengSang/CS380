@@ -1,5 +1,47 @@
 #pragma once
 #include "Misc/PathfindingDetails.hpp"
+#include <vector>
+
+enum class ListType : char
+{
+    None,
+    OpenList,
+    ClosedList,
+};
+
+struct Node;
+struct GetNodeInformation
+{ 
+    Node* childNode;
+    float Cost;
+    bool Possible;
+};
+
+class Array2D
+{
+    Node* dataPtr;
+    std::vector<Node> nodes;
+    int width, height;
+public:
+    Node& GetNode(int x, int y);
+    
+    // Returns the x,y of the address passed in.
+    auto GetPosition(Node* ptr);
+    void GetAllChildNodes(int x, int y, GetNodeInformation(&arr)[8]);
+    bool isStraight(int parentX, int parentY, int childX, int childY);
+
+    void SetSize(int width, int height);
+    void Reset();
+    void Clear();
+};
+  
+struct Node
+{   
+    float cost = 0;
+    float given = 0;
+    GridPos parentPosition = {-1,-1};
+    ListType onList = ListType::None;
+};
 
 class AStarPather
 {
@@ -17,10 +59,18 @@ public:
     PathResult compute_path(PathRequest &request);
     /* ************************************************** */
 
-    /*
-        You should create whatever functions, variables, or classes you need.
-        It doesn't all need to be in this header and cpp, structure it whatever way
-        makes sense to you.
-    */
 
+    using NodeVector = std::vector<Node*>; 
+    // Array of Nodes to represent our map
+    Array2D NodeMap;
+    NodeVector OpenList;
+    Node* EndGoal;
+
+    // From open list find the cheapest node
+    Node*& findCheapestNode();
+    void initializeMap();
+    float GetHeuristic(Heuristic heuristic) const;
+    void ConfigureForOpenList(Node* node, GridPos gridPos, float cost, PathRequest& request);
+    void ConfigureForClosedList(Node* node, GridPos gridPos, PathRequest& request);
+    void FinalizeEndPath(PathRequest& request, Node* endNode);
 };
