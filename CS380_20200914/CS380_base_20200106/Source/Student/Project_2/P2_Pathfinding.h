@@ -74,5 +74,16 @@ public:
     void FinalizeEndPath(PathRequest& request, Node* endNode);
     float CalcCost(int parentX, int parentY, int childX, int childY);
     void GetAllChildNodes(int x, int y, GetNodeInformation(&arr)[8]);
-    void RubberBand(WaypointList& path);
+
+    // Node operator functions
+    Node* GetNextNode(Node* node);
+    void PlaceParentIntoPath(WaypointList& path, Node* ptr);
+    void PlaceThisIntoPath(WaypointList& path, Node* ptr);
+    GridPos GetPosition(Node* node);
+
+    // Post process helper
+    bool isWallInRange(int xBegin, int yBeing, int xEnd, int yEnd);
+    bool Smoothing(WaypointList& path);
+    bool Rubberbanding(WaypointList& path, Node* endNode);
+    void NormalNodesToPath(WaypointList& path, Node* endNode);
 };

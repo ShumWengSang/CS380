@@ -5,6 +5,17 @@
 
 static const float WallCost = 9999;
 
+//#define COUT
+
+static GridPos Min(GridPos const& a, GridPos const& b)
+{
+    return  {std::min(a.row, b.row), std::min(a.col, b.col)};
+}
+
+static GridPos Max(GridPos const& a, GridPos const& b)
+{
+    return  { std::max(a.row, b.row), std::max(a.col, b.col) };
+}
 
 #pragma region Extra Credit
 bool ProjectTwo::implemented_floyd_warshall()
@@ -27,7 +38,7 @@ auto Array2D::GetPosition(Node* ptr)
 {
     long long remainder = ptr - const_cast<Node*>(nodes.data());
 
-#ifdef _DEBUG 
+#if defined(_DEBUG) && defined(COUT)
     if ((long)width * height <= remainder)
     {
         DebugBreak();
@@ -37,7 +48,7 @@ auto Array2D::GetPosition(Node* ptr)
     long long x = 0, y = 0;
     x = remainder / width;
     y = remainder - (width * x);
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(COUT)
     std::cout << "Returning x: " << x << " y: " << y << std::endl;
 #endif
     return std::make_tuple((int)x, (int)y);
@@ -293,65 +304,194 @@ void AStarPather::ConfigureForClosedList(Node* node, GridPos gridPos, PathReques
 
 void AStarPather::FinalizeEndPath(PathRequest& request, Node* endNode)
 {
-    // Walk the end node until we reach {-1, -1}
-    Node* currNode = endNode;
-    auto [x, y] = NodeMap.GetPosition(endNode);
-    auto worldPos = terrain->get_world_position( x,y );
-    request.path.emplace_back(worldPos);
-
-    // Check for -1 
-    while (currNode->parentPosition.col != -1)
+    // If we are rubberbanding and if it works,
+    if (request.settings.rubberBanding && Rubberbanding(request.path, endNode))
     {
-        // If debug on
-        auto worldPos = terrain->get_world_position(currNode->parentPosition);
-        request.path.emplace_back(worldPos);
-        currNode = &NodeMap.GetNode(currNode->parentPosition);
+        
+    }
+    else // If either are not true, we prepare the path the normal way.
+    {
+        NormalNodesToPath(request.path, endNode);
     }
 
-    if (request.settings.rubberBanding)
+    // If we are smoothing
+    if (request.settings.smoothing)
     {
-        RubberBand(request.path);
+        if (!Smoothing(request.path))
+        {
+            return;
+        }
     }
-    else
-    {
-        std::reverse(request.path.begin(), request.path.end());
-    }
-
-    // Now we begin post processing the path
-
-    // Rubber band path    
-
-    // if smooth
-      // add points back in when > 1.5
-    // Smooth path
-    
-
+    return ;
 
 }
 
 
-void AStarPather::RubberBand(WaypointList& path)
+bool AStarPather::Smoothing(WaypointList& path)
 {
-    WaypointList returnPath;
+    if (path.empty())
+        return false;
 
     // We add one before and one at the end of the path.
     path.emplace_front(path.front());
     path.emplace_back(path.back());
 
-    // 
-    for (auto& iter = path.begin(), iter2 = std::next(iter), iter3 = std::next(iter2), iter4 = std::next(iter3); 
-        iter4 != path.end();
-        ++iter, ++iter2, ++iter3, ++iter4)
-    {
-        // Add the current node into the return path.
-        returnPath.emplace_front(*iter);
+    // Make sure there are enough points to work on.
+    WaypointList::iterator left = path.begin();
+    if (left == path.end())
+        return false;
+    WaypointList::iterator midLeft = std::next(left);
+    if (midLeft == path.end())
+        return false;
+    WaypointList::iterator midRight = std::next(midLeft);
+    if (midRight == path.end())
+        return false;
+    WaypointList::iterator right = std::next(midRight);
+    if (right == path.end())
+        return false;
 
-        // And find the acoompanying 3 nodes with it based on splice  
-        returnPath.emplace_front(DirectX::SimpleMath::Vector3::CatmullRom(*iter, *iter2, *iter3, *iter4, 0.75f));
-        returnPath.emplace_front(DirectX::SimpleMath::Vector3::CatmullRom(*iter, *iter2, *iter3, *iter4, 0.50f));
-        returnPath.emplace_front(DirectX::SimpleMath::Vector3::CatmullRom(*iter, *iter2, *iter3, *iter4, 0.25f));
+    while (right != path.end())
+    {
+        using DirectX::SimpleMath::Vector3;
+        path.emplace(midRight, Vector3::CatmullRom(*left, *midLeft, *midRight, *right, 0.25f));
+        path.emplace(midRight, Vector3::CatmullRom(*left, *midLeft, *midRight, *right, 0.50f));
+        path.emplace(midRight, Vector3::CatmullRom(*left, *midLeft, *midRight, *right, 0.75f));
+        
+        // Advance Iterators
+        left = midLeft;
+        midLeft = midRight;
+        ++midRight, ++right;
     }
-    path = returnPath;
+
+    return true;
+}
+
+bool AStarPather::Rubberbanding(WaypointList& path, Node* endNode)
+{
+    // For 3 nodes, make a square and determine if any of the squares are walls. 
+    // If so, don't remove the middle node. Else remove middle node.
+
+
+    // Get all three ptrs.
+    Node* tailNode = endNode;
+    if (!tailNode)
+        return false;
+    Node* middleNode = GetNextNode(tailNode);
+    if (!middleNode)
+        return false;
+    Node* headNode = GetNextNode(middleNode);
+    if (!headNode)
+        return false;
+
+#if defined(_DEBUG) && defined(COUT)
+    // DEBUG PRINT ALL NODES
+    Node* curNode = tailNode;
+    while (curNode != nullptr)
+    {
+        std::cout << "Vec2 [" << curNode->parentPosition.row << "," << curNode->parentPosition.col << "]" << std::endl;
+        curNode = GetNextNode(curNode);
+    }
+#endif
+
+    PlaceThisIntoPath(path, tailNode);
+
+    // Keep doing this until head is null.
+    while (headNode != nullptr)
+    {
+        GridPos headPos = GetPosition(headNode);
+        GridPos tailPos = GetPosition(tailNode);
+        GridPos midPos = GetPosition(middleNode);
+        // Create a square from tail and head
+        //GridPos RectSize = { abs(tailPos.row - headPos.row), abs(tailPos.col - headPos.col) };
+        GridPos startPoint = Min(headPos, tailPos);
+        GridPos endPoint = Max(headPos, tailPos);
+        
+#if defined(_DEBUG) && defined(COUT)
+        std::cout << "Head position: " << headPos.row << "," << headPos.col << 
+            " and tail position: " << tailPos.row << "," << tailPos.col << std::endl;
+#endif
+
+        // Go through each node in that square
+        if (isWallInRange(startPoint.row, startPoint.col, endPoint.row, endPoint.col))
+        {
+#if defined(_DEBUG) && defined(COUT)
+            std::cout << "Wall detected" << std::endl;
+#endif
+
+            // There is a wall, we need the middle node. 
+            PlaceThisIntoPath(path, middleNode);
+            headNode = GetNextNode(headNode);
+            tailNode = middleNode;
+            middleNode = GetNextNode(middleNode);
+
+        }
+        else
+        {
+            // No walls, we don't add it in.
+            headNode = GetNextNode(headNode);
+            middleNode = GetNextNode(middleNode);
+        }
+    }
+
+    // At the end of it, we need to add the last node in.
+    PlaceThisIntoPath(path, middleNode);
+    return true;
+}
+
+void AStarPather::NormalNodesToPath(WaypointList& path, Node* endNode)
+{
+    // Error check
+    if (endNode->parentPosition.col == -1)
+        return;
+    Node* currNode = endNode;
+    PlaceThisIntoPath(path, currNode);
+    while (currNode != nullptr)
+    {
+        // If debug on
+        PlaceParentIntoPath(path, currNode);
+        currNode = GetNextNode(currNode);
+    }
+}
+
+Node* AStarPather::GetNextNode(Node* node)
+{
+    Node* currNode = &NodeMap.GetNode(node->parentPosition);
+    return currNode->parentPosition.col == -1 ? nullptr : currNode;
+}
+
+void AStarPather::PlaceParentIntoPath(WaypointList& path, Node* ptr)
+{
+    auto worldPos = terrain->get_world_position(ptr->parentPosition);
+    path.emplace_front(worldPos);
+}
+
+void AStarPather::PlaceThisIntoPath(WaypointList& path, Node* ptr)
+{
+    auto [x, y] = NodeMap.GetPosition(ptr);
+    auto worldPos = terrain->get_world_position(x, y);
+    path.emplace_front(worldPos);
+}
+
+GridPos AStarPather::GetPosition(Node* node)
+{
+    auto [x, y] = NodeMap.GetPosition(node);
+    return { x,y };
+}
+
+bool AStarPather::isWallInRange(int xBegin, int yBegin, int xEnd, int yEnd)
+{
+    for (auto i = xBegin; i <= xEnd; ++i)
+    {
+        for (auto j = yBegin; j <= yEnd; ++j)
+        {
+
+            if (terrain->is_wall(i, j))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 
@@ -461,7 +601,7 @@ void Array2D::Clear()
 // Make sure you've set the size before calling this.
 Node& Array2D::GetNode(int x, int y)
 {
-#ifdef _DEBUG 
+#if defined(_DEBUG) && defined(COUT)
     if (x * y >= width * height)
         DebugBreak();
     if (x * y < 0)
@@ -472,7 +612,7 @@ Node& Array2D::GetNode(int x, int y)
         DebugBreak();
 #endif
     auto index = (dataPtr + x * width + y) - dataPtr;
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(COUT)
     std::cout << "Request of " << x << " : " << y << " gives " << index << " thing." << std::endl;
 #endif
     return *(dataPtr + x * width + y);
