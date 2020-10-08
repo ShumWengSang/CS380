@@ -5,6 +5,7 @@
 
 static const float WallCost = 9999;
 
+
 #pragma region Extra Credit
 bool ProjectTwo::implemented_floyd_warshall()
 {
@@ -26,15 +27,19 @@ auto Array2D::GetPosition(Node* ptr)
 {
     long long remainder = ptr - const_cast<Node*>(nodes.data());
 
+#ifdef _DEBUG 
     if ((long)width * height <= remainder)
     {
         DebugBreak();
     }
+#endif
 
     long long x = 0, y = 0;
     x = remainder / width;
     y = remainder - (width * x);
+#ifdef _DEBUG
     std::cout << "Returning x: " << x << " y: " << y << std::endl;
+#endif
     return std::make_tuple((int)x, (int)y);
 }
 
@@ -113,13 +118,13 @@ PathResult AStarPather::compute_path(PathRequest &request)
     {
         NodeMap.Clear();
         GridPos start = terrain->get_grid_position(request.start);
-        GridPos goal = terrain->get_grid_position(request.goal);
+        GoalPos = terrain->get_grid_position(request.goal);
         terrain->set_color(start, Colors::Orange);
-        terrain->set_color(goal, Colors::Orange);
+        terrain->set_color(GoalPos, Colors::Orange);
 
         Node* startNode = &(NodeMap.GetNode(start.row,start.col));
         startNode->onList = ListType::OpenList;
-        EndGoal = &(NodeMap.GetNode(goal.row,goal.col));
+        EndGoal = &(NodeMap.GetNode(GoalPos.row, GoalPos.col));
 
         OpenList.clear();
 
@@ -141,32 +146,36 @@ PathResult AStarPather::compute_path(PathRequest &request)
 
         GetNodeInformation childNodes[8] = {};
         auto [x, y] = NodeMap.GetPosition(cheapestNode);
-        NodeMap.GetAllChildNodes(x, y, childNodes);
+        GetAllChildNodes(x, y, childNodes);
 
         if (cheapestNode == nullptr)
-            break;
+			break;
 
-        for (int i = 0; i < 8; ++i)
-        {
-            auto& child = childNodes[i];
-            if (child.Possible)
-            {
-                // Compute g(x), from our node to child.
-                // GetAllChild also computes if cost is 1 or sqrt(2
-                float gx = cheapestNode->cost + child.Cost;
-                float thisCost = gx + GetHeuristic(request.settings.heuristic);
+		for (int i = 0; i < 8; ++i)
+		{
+			auto& child = childNodes[i];
+			// Negative costs are discarded, as they are deemed
+			// unapproachable
+			if (child.Cost >= 0)
+			{
+				// Compute g(x), from our node to child.
+				// GetAllChild also computes if cost is 1 or sqrt(2
+				auto [childX, childY] = NodeMap.GetPosition(child.childNode);
+				float gx = cheapestNode->givenCost + child.Cost;
+				float thisCost = gx + GetHeuristic({ childX, childY }, GoalPos, request) *
+					request.settings.weight;
 
-                // If not in open or closed list
+				// If not in open or closed list
                 if (child.childNode->onList == ListType::None)
                 {
                     // Put on open list.
-                    ConfigureForOpenList(child.childNode, { x,y }, thisCost, request);
+                    ConfigureForOpenList(child.childNode, { x,y }, thisCost, gx, request);
                     OpenList.emplace_back(child.childNode);
                 }
                 else
                 {
                     // If node is cheaper then the node on the open/closed list.
-                    if (thisCost < child.childNode->cost)
+                    if (thisCost < child.childNode->finalCost)
                     {
                         // Since this is cheaper, we will use this instead.
                         // Place on open list if its not.
@@ -175,13 +184,13 @@ PathResult AStarPather::compute_path(PathRequest &request)
                             OpenList.emplace_back(child.childNode);
                         }
                         // And now we update it.
-                        ConfigureForOpenList(child.childNode, { x,y }, thisCost, request);
+                        ConfigureForOpenList(child.childNode, { x,y }, thisCost, gx, request);
                     }
                 }
             }
         }
         // Place parent node on closed list.
-        ConfigureForClosedList(cheapestNode, { x,y }, request);
+        ConfigureForClosedList(cheapestNode, {x, y }, request);
         // Swap and pop idiom
         std::swap(cheapestNode, OpenList.back());
         OpenList.pop_back();
@@ -200,7 +209,9 @@ PathResult AStarPather::compute_path(PathRequest &request)
 
 void AStarPather::initializeMap()
 {
+#ifdef _DEBUG
     std::cout << "Initializing new map" << std::endl;
+#endif
     NodeMap.SetSize(terrain->get_map_width(), terrain->get_map_height());
     // Resize the node map.
 
@@ -212,7 +223,11 @@ void AStarPather::initializeMap()
         {
             if (terrain->is_wall(i, j))
             {
-                NodeMap.GetNode(i,j).cost = WallCost;
+                NodeMap.GetNode(i,j).finalCost = WallCost;
+            }
+            else
+            {
+                NodeMap.GetNode(i, j).finalCost = 0;
             }
         }
     }
@@ -220,21 +235,51 @@ void AStarPather::initializeMap()
 
 }
 
-float AStarPather::GetHeuristic(Heuristic heuristic) const
+float AStarPather::GetHeuristic(GridPos const &requester, GridPos const &goal, PathRequest const& heuristic) const
 {
+    const int xDiff = abs(requester.row - goal.row);
+    const int yDiff = abs(requester.col - goal.col);
+    const static float rt2 = sqrtf(2.0f);
+    switch (heuristic.settings.heuristic)
+    {
+    case Heuristic::OCTILE:
+    {
+        auto min = std::min(xDiff, yDiff);
+        return min * rt2 + std::max(xDiff, yDiff) - min;
+        break;
+    }
+    case Heuristic::CHEBYSHEV:
+    {
+        return (float)std::max(xDiff, yDiff);
+    }
+    case Heuristic::MANHATTAN:
+    {
+        return (float)xDiff + yDiff;
+    }
+    case Heuristic::EUCLIDEAN:
+    {
+        return (float)sqrt(pow(xDiff, 2) + pow(yDiff, 2));
+    }
+#ifdef _DEBUG
+    default:
+        DebugBreak();
+#endif
+    }
+
     return 0.0f;
 }
 
-void AStarPather::ConfigureForOpenList(Node* node, GridPos gridPos, float cost, PathRequest& request)
+void AStarPather::ConfigureForOpenList(Node* node, GridPos gridPos, float finalCost, float gx, PathRequest& request)
 { 
     if (request.settings.debugColoring)
     {
         auto [x, y] = NodeMap.GetPosition(node);
-        terrain->set_color(x, y, Colors::Yellow);
+        terrain->set_color(x, y, Colors::Blue);
     }
     node->onList = ListType::OpenList;
     node->parentPosition = std::move(gridPos);
-    node->cost = cost;
+    node->finalCost = finalCost;
+    node->givenCost = gx;
 }
 
 void AStarPather::ConfigureForClosedList(Node* node, GridPos gridPos, PathRequest& request)
@@ -242,7 +287,7 @@ void AStarPather::ConfigureForClosedList(Node* node, GridPos gridPos, PathReques
     node->onList = ListType::ClosedList;
     if (request.settings.debugColoring)
     {
-        terrain->set_color(gridPos, Colors::Blue);
+        terrain->set_color(gridPos, Colors::Yellow);
     }
 }
 
@@ -263,7 +308,85 @@ void AStarPather::FinalizeEndPath(PathRequest& request, Node* endNode)
         currNode = &NodeMap.GetNode(currNode->parentPosition);
     }
 
-    std::reverse(request.path.begin(), request.path.end());
+    if (request.settings.rubberBanding)
+    {
+        RubberBand(request.path);
+    }
+    else
+    {
+        std::reverse(request.path.begin(), request.path.end());
+    }
+
+    // Now we begin post processing the path
+
+    // Rubber band path    
+
+    // if smooth
+      // add points back in when > 1.5
+    // Smooth path
+    
+
+
+}
+
+
+void AStarPather::RubberBand(WaypointList& path)
+{
+    WaypointList returnPath;
+
+    // We add one before and one at the end of the path.
+    path.emplace_front(path.front());
+    path.emplace_back(path.back());
+
+    // 
+    for (auto& iter = path.begin(), iter2 = std::next(iter), iter3 = std::next(iter2), iter4 = std::next(iter3); 
+        iter4 != path.end();
+        ++iter, ++iter2, ++iter3, ++iter4)
+    {
+        // Add the current node into the return path.
+        returnPath.emplace_front(*iter);
+
+        // And find the acoompanying 3 nodes with it based on splice  
+        returnPath.emplace_front(DirectX::SimpleMath::Vector3::CatmullRom(*iter, *iter2, *iter3, *iter4, 0.75f));
+        returnPath.emplace_front(DirectX::SimpleMath::Vector3::CatmullRom(*iter, *iter2, *iter3, *iter4, 0.50f));
+        returnPath.emplace_front(DirectX::SimpleMath::Vector3::CatmullRom(*iter, *iter2, *iter3, *iter4, 0.25f));
+    }
+    path = returnPath;
+}
+
+
+float AStarPather::CalcCost(int parentX, int parentY, int childX, int childY)
+{
+    static const float diagonalCost = sqrtf(2.0f);
+    static const float flatCost = 1.0f;
+    static const float FailCost = -1;
+
+    // If this is a wall, just fail
+    if ((NodeMap.GetNode(childX, childY).finalCost == WallCost))
+        return FailCost;
+
+    //If straight, cost is 1.
+    if (NodeMap.isStraight(parentX, parentY, childX, childY))
+        return flatCost;
+
+    // Else now it is diagonal
+    else
+    {
+        // Corresponding checks to dx,dy for diagonality
+
+        // Now do diagonal checks
+        int dx = parentX - childX;
+        int dy = parentY - childY;
+
+        // Two wall check, if either are wall we fail
+        if (NodeMap.GetNode(childX, childY + dy).finalCost == WallCost ||
+            NodeMap.GetNode(childX + dx, childY).finalCost == WallCost)
+        {
+            return FailCost;
+        }
+        else
+            return diagonalCost;
+    }
 
 }
 
@@ -274,25 +397,24 @@ Node*& AStarPather::findCheapestNode()
     float cheapestCostSoFar = std::numeric_limits<float>::max();
     Node** cheapestNodeSoFar = nullptr;
 
-    for (int i = 0; i < OpenList.size(); ++i)
-    {
-        if (cheapestCostSoFar > OpenList[i]->cost)
+    std::for_each(OpenList.rbegin(), OpenList.rend(), [&](Node*& node)
         {
-            cheapestCostSoFar = OpenList[i]->cost;
-            cheapestNodeSoFar = &OpenList[i];
-        }
-    }
+            if (cheapestCostSoFar > node->finalCost)
+            {
+                cheapestCostSoFar = node->finalCost;
+                cheapestNodeSoFar = &node;
+            }
+        });
+
     return *cheapestNodeSoFar;
 }
 
-void Array2D::GetAllChildNodes(int x, int y, GetNodeInformation(&arr)[8])
+void AStarPather::GetAllChildNodes(int x, int y, GetNodeInformation(&arr)[8])
 {
     int row_limit = terrain->get_map_width();
     int column_limit = terrain->get_map_height();
     int arrayIndex = 0;
 
-    static const float diagonalCost = sqrtf(2.0f);
-    static const float flatCost = 1.0f;
     // Go through the neighbours with bounds checking built in.
     for (int i = std::max(0, x - 1); i <= std::min(x + 1, row_limit - 1); ++i)
     {
@@ -300,14 +422,9 @@ void Array2D::GetAllChildNodes(int x, int y, GetNodeInformation(&arr)[8])
         {
             if (x != i || y != j)
             {
-                arr[arrayIndex].childNode = &this->GetNode(i,j);
-                arr[arrayIndex].Cost = isStraight(x, y, i, j) ? flatCost : diagonalCost;
-                arr[arrayIndex].Possible = (this->GetNode(i,j).cost != WallCost);
+                arr[arrayIndex].childNode = &NodeMap.GetNode(i,j);
+                arr[arrayIndex].Cost = CalcCost(x, y, i, j);
                 ++arrayIndex;
-            }
-            if (arrayIndex >= 9)
-            {
-                DebugBreak();
             }
         }
     }
@@ -336,7 +453,7 @@ void Array2D::Clear()
     for (int i = 0; i < nodes.size(); ++i)
     {
         // Ignore if wall
-        if(nodes[i].cost != WallCost)
+        if(nodes[i].finalCost != WallCost)
             nodes[i] = Node();
     }
 }
@@ -344,6 +461,7 @@ void Array2D::Clear()
 // Make sure you've set the size before calling this.
 Node& Array2D::GetNode(int x, int y)
 {
+#ifdef _DEBUG 
     if (x * y >= width * height)
         DebugBreak();
     if (x * y < 0)
@@ -352,9 +470,11 @@ Node& Array2D::GetNode(int x, int y)
         DebugBreak();
     if (y >= height)
         DebugBreak();
-
+#endif
     auto index = (dataPtr + x * width + y) - dataPtr;
+#ifdef _DEBUG
     std::cout << "Request of " << x << " : " << y << " gives " << index << " thing." << std::endl;
+#endif
     return *(dataPtr + x * width + y);
 }
 

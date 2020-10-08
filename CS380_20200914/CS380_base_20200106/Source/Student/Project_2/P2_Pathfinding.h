@@ -13,8 +13,7 @@ struct Node;
 struct GetNodeInformation
 { 
     Node* childNode;
-    float Cost;
-    bool Possible;
+    float Cost = -1;
 };
 
 class Array2D
@@ -27,7 +26,6 @@ public:
     Node& GetNode(GridPos position);
     // Returns the x,y of the address passed in.
     auto GetPosition(Node* ptr);
-    void GetAllChildNodes(int x, int y, GetNodeInformation(&arr)[8]);
     bool isStraight(int parentX, int parentY, int childX, int childY);
 
     void SetSize(int width, int height);
@@ -37,8 +35,8 @@ public:
   
 struct Node
 {   
-    float cost = 0;
-    float given = 0;
+    float finalCost = 0;
+    float givenCost = 0;
     GridPos parentPosition = {-1,-1};
     ListType onList = ListType::None;
 };
@@ -65,12 +63,16 @@ public:
     Array2D NodeMap;
     NodeVector OpenList;
     Node* EndGoal;
+    GridPos GoalPos;
 
     // From open list find the cheapest node
     Node*& findCheapestNode();
     void initializeMap();
-    float GetHeuristic(Heuristic heuristic) const;
-    void ConfigureForOpenList(Node* node, GridPos gridPos, float cost, PathRequest& request);
+    float GetHeuristic(GridPos const& requester, GridPos const& goal,PathRequest const & heuristic) const;
+    void ConfigureForOpenList(Node* node, GridPos gridPos, float finalCost, float gx, PathRequest& request);
     void ConfigureForClosedList(Node* node, GridPos gridPos, PathRequest& request);
     void FinalizeEndPath(PathRequest& request, Node* endNode);
+    float CalcCost(int parentX, int parentY, int childX, int childY);
+    void GetAllChildNodes(int x, int y, GetNodeInformation(&arr)[8]);
+    void RubberBand(WaypointList& path);
 };
