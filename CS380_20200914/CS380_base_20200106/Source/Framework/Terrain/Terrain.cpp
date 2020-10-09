@@ -219,11 +219,23 @@ int Terrain::get_map_width() const
 
 const Vec3 &Terrain::get_world_position(int row, int col) const
 {
+#if defined(_DEBUG)
+    if (row < 0 || row >= this->get_map_width())
+        DebugBreak();
+    if (col < 0 || col >= this->get_map_height())
+        DebugBreak();
+#endif
     return positions[row][col];
 }
 
 const Vec3 &Terrain::get_world_position(const GridPos &gridPos)
 {
+#if defined(_DEBUG)
+    if (gridPos.row < 0 || gridPos.row >= this->get_map_width())
+        DebugBreak();
+    if (gridPos.col < 0 || gridPos.col >= this->get_map_height())
+        DebugBreak();
+#endif
     return positions[gridPos.row][gridPos.col];
 }
 

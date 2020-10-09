@@ -38,7 +38,7 @@ auto Array2D::GetPosition(Node* ptr)
 {
     long long remainder = ptr - const_cast<Node*>(nodes.data());
 
-#if defined(_DEBUG) && defined(COUT)
+#if defined(_DEBUG)
     if ((long)width * height <= remainder)
     {
         DebugBreak();
@@ -120,8 +120,8 @@ PathResult AStarPather::compute_path(PathRequest &request)
             COMPLETE - a path to the goal was found and has been built in request.path
             IMPOSSIBLE - a path from start to goal does not exist, do not add start position to path
     */
-    if (request.settings.method != Method::ASTAR)
-        return PathResult::COMPLETE;
+    //if (request.settings.method != Method::ASTAR)
+    //    return PathResult::COMPLETE;
 
     // If this is a new request, we clean the open list and place 
     // The start node in, also set the goal.
@@ -641,8 +641,12 @@ void Array2D::Clear()
 // Make sure you've set the size before calling this.
 Node& Array2D::GetNode(int x, int y)
 {
-#if defined(_DEBUG) && defined(COUT)
+#if defined(_DEBUG)
     if (x * y >= width * height)
+        DebugBreak();
+    if (x < 0)
+        DebugBreak();
+    if (y < 0)
         DebugBreak();
     if (x * y < 0)
         DebugBreak();
