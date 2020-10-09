@@ -16,6 +16,33 @@ struct GetNodeInformation
     float Cost = -1;
 };
 
+//Disable packing
+#pragma pack(push, 1)
+struct GridPosChar
+{
+    // We can afford to use signed as the largest map is 40x40
+    char row;
+    char col;
+
+    GridPosChar() = default;
+    GridPosChar(char row, char col) : row(row), col(col)
+    {}
+
+    explicit GridPosChar(GridPos const& grid) : row(grid.row), col(grid.col)
+    {}
+
+    bool operator==(const GridPosChar& rhs) const
+    {
+        return row == rhs.row && col == rhs.col;
+    }
+
+    bool operator!=(const GridPosChar& rhs) const
+    {
+        return row != rhs.row || col != rhs.col;
+    }
+};
+#pragma pack(pop)
+
 class Array2D
 {
     Node* dataPtr;
@@ -23,7 +50,7 @@ class Array2D
     int width, height;
 public:
     Node& GetNode(int x, int y);
-    Node& GetNode(GridPos position);
+    Node& GetNode(GridPosChar position);
     // Returns the x,y of the address passed in.
     auto GetPosition(Node* ptr);
     bool isStraight(int parentX, int parentY, int childX, int childY);
@@ -32,14 +59,17 @@ public:
     void Reset();
     void Clear();
 };
-  
+
+//Disable packing
+#pragma pack(push, 1)
 struct Node
 {   
     float finalCost = 0;
     float givenCost = 0;
-    GridPos parentPosition = {-1,-1};
+    GridPosChar parentPosition = {-1,-1};
     ListType onList = ListType::None;
 };
+#pragma pack(pop)
 
 class AStarPather
 {

@@ -125,6 +125,8 @@ PathResult AStarPather::compute_path(PathRequest &request)
 
     // If this is a new request, we clean the open list and place 
     // The start node in, also set the goal.
+    size_t size = sizeof(GridPosChar);
+    size_t nodesize = sizeof(Node);
     if (request.newRequest)
     {
         NodeMap.Clear();
@@ -272,7 +274,7 @@ float AStarPather::GetHeuristic(GridPos const &requester, GridPos const &goal, P
     }
     case Heuristic::EUCLIDEAN:
     {
-        return (float)sqrt(pow(xDiff, 2) + pow(yDiff, 2));
+        return (float)sqrt(xDiff * xDiff + yDiff * yDiff);
     }
 #ifdef _DEBUG
     default:
@@ -291,7 +293,7 @@ void AStarPather::ConfigureForOpenList(Node* node, GridPos gridPos, float finalC
         terrain->set_color(x, y, Colors::Blue);
     }
     node->onList = ListType::OpenList;
-    node->parentPosition = std::move(gridPos);
+    node->parentPosition = GridPosChar(gridPos); // Implicit convert
     node->finalCost = finalCost;
     node->givenCost = gx;
 }
@@ -501,7 +503,7 @@ Node* AStarPather::GetNextNode(Node* node)
 
 void AStarPather::PlaceParentIntoPath(WaypointList& path, Node* ptr)
 {
-    auto worldPos = terrain->get_world_position(ptr->parentPosition);
+    auto worldPos = terrain->get_world_position({ ptr->parentPosition.row, ptr->parentPosition.col });
     path.emplace_front(worldPos);
 }
 
@@ -662,7 +664,7 @@ Node& Array2D::GetNode(int x, int y)
     return *(dataPtr + x * width + y);
 }
 
-Node& Array2D::GetNode(GridPos position)
+Node& Array2D::GetNode(GridPosChar position)
 {
     return GetNode(position.row, position.col);
 }
