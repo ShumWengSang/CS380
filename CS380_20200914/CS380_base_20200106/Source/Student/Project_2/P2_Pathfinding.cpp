@@ -220,12 +220,15 @@ PathResult AStarPather::compute_path(PathRequest &request)
 
 void AStarPather::initializeMap()
 {
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(COUT)
     std::cout << "Initializing new map" << std::endl;
 #endif
     NodeMap.SetSize(terrain->get_map_width(), terrain->get_map_height());
     // Resize the node map.
 
+    // Calc split distance
+    float oneDistance = DirectX::SimpleMath::Vector3::Distance(terrain->get_world_position(0, 0), terrain->get_world_position(0, 1));
+    SplitDistance = oneDistance + oneDistance / 2.0f;
 
     // Set all the wall nodes
     for (int i = 0; i < terrain->get_map_width(); ++i) 
@@ -304,10 +307,11 @@ void AStarPather::ConfigureForClosedList(Node* node, GridPos gridPos, PathReques
 
 void AStarPather::FinalizeEndPath(PathRequest& request, Node* endNode)
 {
+    bool didRubberband = false;
     // If we are rubberbanding and if it works,
     if (request.settings.rubberBanding && Rubberbanding(request.path, endNode))
     {
-        
+        didRubberband = true;
     }
     else // If either are not true, we prepare the path the normal way.
     {
@@ -317,6 +321,11 @@ void AStarPather::FinalizeEndPath(PathRequest& request, Node* endNode)
     // If we are smoothing
     if (request.settings.smoothing)
     {
+        // If we did rubberbanding, we will have to make sure the path is filled again.
+        if (didRubberband)
+        {
+            RubberbandSmooth_AddNodes(request.path);
+        }
         if (!Smoothing(request.path))
         {
             return;
@@ -326,6 +335,37 @@ void AStarPather::FinalizeEndPath(PathRequest& request, Node* endNode)
 
 }
 
+
+void AStarPather::RubberbandSmooth_AddNodes(WaypointList& path)
+{
+    if (path.size() < 2)
+        return;
+
+    WaypointList::iterator first = path.begin();
+    WaypointList::iterator second= std::next(first);
+
+    while (second != path.end())
+    {
+        Split(first, second, path);
+        first = second;
+        ++second;
+    }
+}
+
+bool AStarPather::Split(WaypointList::iterator const& a, WaypointList::iterator const& b, WaypointList& path)
+{
+    // Base case
+    if (DirectX::SimpleMath::Vector3::Distance(*a, *b) <= SplitDistance)
+        return false;
+    else
+    {
+        // Create a node in between the two points.
+        Vec3 midPoint = (*a + *b) / 2;
+        WaypointList::iterator newIterator = path.emplace(b, midPoint);
+        // Now split between the new point and a, new point and b
+        return Split(a, newIterator, path) || Split(newIterator, b, path);
+    }
+}
 
 bool AStarPather::Smoothing(WaypointList& path)
 {
@@ -447,11 +487,11 @@ void AStarPather::NormalNodesToPath(WaypointList& path, Node* endNode)
     PlaceThisIntoPath(path, currNode);
     while (currNode != nullptr)
     {
-        // If debug on
         PlaceParentIntoPath(path, currNode);
         currNode = GetNextNode(currNode);
     }
 }
+
 
 Node* AStarPather::GetNextNode(Node* node)
 {

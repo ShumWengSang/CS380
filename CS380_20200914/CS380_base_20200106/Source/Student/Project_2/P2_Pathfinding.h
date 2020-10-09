@@ -86,4 +86,9 @@ public:
     bool Smoothing(WaypointList& path);
     bool Rubberbanding(WaypointList& path, Node* endNode);
     void NormalNodesToPath(WaypointList& path, Node* endNode);
+    void RubberbandSmooth_AddNodes(WaypointList& path);
+
+    // Returns true if it split, false if it didn't.
+    bool Split(WaypointList::iterator const& a, WaypointList::iterator const& b, WaypointList& path);
+    float SplitDistance = 0.0f;
 };
