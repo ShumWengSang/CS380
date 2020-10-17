@@ -154,6 +154,8 @@ PathResult AStarPather::compute_path(PathRequest &request)
         if (cheapestNode == EndGoal)
         {
             FinalizeEndPath(request, cheapestNode);
+            info.End();
+            info.Print();
             return PathResult::COMPLETE;
         }
 
@@ -296,6 +298,8 @@ void AStarPather::ConfigureForOpenList(Node* node, GridPos gridPos, float finalC
     node->parentPosition = GridPosChar(gridPos); // Implicit convert
     node->finalCost = finalCost;
     node->givenCost = gx;
+
+    info.Update(node, (int)OpenList.size());
 }
 
 void AStarPather::ConfigureForClosedList(Node* node, GridPos gridPos, PathRequest& request)

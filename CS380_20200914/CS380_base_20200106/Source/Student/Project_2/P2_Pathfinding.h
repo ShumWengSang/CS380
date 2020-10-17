@@ -121,4 +121,42 @@ public:
     // Returns true if it split, false if it didn't.
     bool Split(WaypointList::iterator const& a, WaypointList::iterator const& b, WaypointList& path);
     float SplitDistance = 0.0f;
+
+    struct UsefulInformation
+    {
+        int MaxSize = std::numeric_limits<int>::min();
+        float AvgSize = 0;
+
+        float maxCost = std::numeric_limits<float>::min();
+        float avgCost = 0;
+
+        float numOfRounds = 0;
+        void Update(Node* node, int size)
+        {
+            numOfRounds++;
+            if (size > MaxSize) MaxSize = size;
+            if (node->finalCost > maxCost) maxCost = node->finalCost;
+            avgCost += node->finalCost;
+            AvgSize += size;
+        }
+
+        void End()
+        {
+            avgCost /= (float)numOfRounds;
+            AvgSize /= (float)numOfRounds;
+            numOfRounds = 0;
+        }
+
+        void Print()
+        {
+            std::cout << "-------------------------------------" << std::endl;
+            std::cout << "Max Size: " << MaxSize << std::endl;
+            std::cout << "Avg Size: " << AvgSize<< std::endl;
+            std::cout << "Max Cost: " << maxCost << std::endl;
+            std::cout << "Avg Size: " << avgCost << std::endl;
+            std::cout << "-------------------------------------" << std::endl;
+        }
+    };
+
+    UsefulInformation info;
 };
