@@ -154,8 +154,10 @@ PathResult AStarPather::compute_path(PathRequest &request)
         if (cheapestNode == EndGoal)
         {
             FinalizeEndPath(request, cheapestNode);
+#ifdef _DEBUG
             info.End();
             info.Print();
+#endif
             return PathResult::COMPLETE;
         }
 
@@ -299,7 +301,9 @@ void AStarPather::ConfigureForOpenList(Node* node, GridPos gridPos, float finalC
     node->finalCost = finalCost;
     node->givenCost = gx;
 
-    info.Update(node, (int)OpenList.size());
+#ifdef _DEBUG
+    info.Update(node, (int)OpenList.si ze());
+#endif
 }
 
 void AStarPather::ConfigureForClosedList(Node* node, GridPos gridPos, PathRequest& request)
@@ -480,7 +484,7 @@ bool AStarPather::Rubberbanding(WaypointList& path, Node* endNode)
     }
 
     // At the end of it, we need to add the last node in.
-    PlaceThisIntoPath(path, middleNode);
+    PlaceThisIntoPath(path, &NodeMap.GetNode(middleNode->parentPosition));
     return true;
 }
 
