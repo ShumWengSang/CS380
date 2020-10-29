@@ -302,7 +302,7 @@ void AStarPather::ConfigureForOpenList(Node* node, GridPos gridPos, float finalC
     node->givenCost = gx;
 
 #ifdef _DEBUG
-    info.Update(node, (int)OpenList.si ze());
+    info.Update(node, (int)OpenList.size());
 #endif
 }
 
